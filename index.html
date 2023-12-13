@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+
+<head>
+  <title>Large Plane</title>
+  <script src="three.min.js"></script>
+  <script src="KeyboardState.js"></script>
+
+  <script>
+    var scene, camera, renderer;  
+
+    var canvas; 
+
+    var keyboard = new KeyboardState();
+
+    var dirLight; 
+    var angle;  
+
+    var timeStep = 0.5;
+
+    var fig, moving, body;
+    var lhip, rhip, lleg, rleg, ls, rs, larm, rarm;
+    var figHeading, thrust = new THREE.Vector3(),
+      figPos = new THREE.Vector3();
+    var camPosition, camTarget, gaze = new THREE.Vector3();
+
+    function createPlanet(radius, segments, rings, color, offsetx, offsety, rotrate, primary) {
+
+      var sphereGeometry = new THREE.SphereGeometry(radius, segments, rings);
+      var sphereMaterial = new THREE.MeshLambertMaterial({color: color});
+      var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+
+      var system = new THREE.Object3D();  
+      primary.add(system);
+      system.add(sphere);
+      sphere.position.x = offsetx;
+      sphere.position.y = offsety;
+      system.rotrate = rotrate;
+      planets.push(system);
+      return sphere;
+    }
+
+    function checkCollision(object1, object2) {
+    const box1 = new THREE.Box3().setFromObject(object1);
+    const box2 = new THREE.Box3().setFromObject(object2);
+    return box1.intersectsBox(box2);
+    }
+
+    function createScene() {
+      renderer.setClearColor(0); 
+      scene = new THREE.Scene(); 
+
+      camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 2000);
+      camera.up = new THREE.Vector3(0, 0, 1);
+
+      // ambient light
+      ambientLight = new THREE.AmbientLight("white", 0.9);
+      scene.add(ambientLight);
+
+      // point light
+      // sunLight = new THREE.PointLight("white", 0.5, 600); // color, intensity, and distance
+      // sunLight.position.set(10, 40, 200);
+      // scene.add(sunLight);
+      // scene.add(new THREE.PointLightHelper(sunLight, 3)); // see where the light is
+
+      // directional light
+      // dirLight = new THREE.DirectionalLight("white", 2);
+      // angle = Math.PI / 4;
+      // dirLight.position.set(0, 80, 80);
+      // scene.add(dirLight);
+
+      // add the ground
+      var loader = new THREE.TextureLoader();
+      var groundMap = loader.load("Wood_Tiles_003_basecolor.jpg");
+      var groundBump = loader.load("Wood_Tiles_003_height.png");
+      groundMap.wrapS = THREE.RepeatWrapping;
+      groundMap.wrapT = THREE.RepeatWrapping;
+      groundMap.repeat.set(30, 60);
+      groundBump.wrapS = THREE.RepeatWrapping;
+      groundBump.wrapT = THREE.RepeatWrapping;
+      groundBump.repeat.set(50, 100);
+      var groundMaterial = new THREE.MeshPhongMaterial({map: groundMap, bumpMap: groundBump});
+      groundMaterial.roughnessMap = loader.load("Wood_Tiles_003_roughness.jpg");
+      groundMaterial.bumpScale = 1;
+      ground = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), groundMaterial);
+      scene.add(ground);
+
+      var moccasin = new THREE.MeshPhongMaterial({color: "moccasin", specular: "white", shininess: 1, side: THREE.DoubleSide});
+      var dimgray = new THREE.MeshPhongMaterial({color: "dimgray", specular: "black", shininess: 0.1, side: THREE.DoubleSide});
+      var darkslategray = new THREE.MeshPhongMaterial({color: "darkslategray", specular: "black", shininess: 0.1, side: THREE.DoubleSide});
+      var grey = new THREE.MeshPhongMaterial({color: "grey", specular: "black", shininess: 0.1, side: THREE.DoubleSide});
+      var black = new THREE.MeshPhongMaterial({color: "black", specular: "black", shininess: 0.1, side: THREE.DoubleSide});
+      var white = new THREE.MeshPhongMaterial({color: "white", specular: "white", shininess: 1, side: THREE.DoubleSide});
+      var wheat = new THREE.MeshPhongMaterial({color: "wheat", specular: "white", shininess: 1, side: THREE.DoubleSide});
+
+      var baseColorTexture = loader.load("Glass_Blocks_001_basecolor.jpg");
+      var bumpMapTexture = loader.load("Glass_Blocks_001_height.png");
+      var roughnessMapTexture = loader.load("Glass_Blocks_001_roughness.jpg");
+      var ambientOcclusionMap = loader.load("Glass_Blocks_001_ambientOcclusion.jpg");
+      var glassTexture = loader.load("Glass_Blocks_001_Glass.jpg");
+
+      var glassMaterial = new THREE.MeshPhongMaterial({
+        color: "white",
+        specular: "white",
+        shininess: 1,
+        side: THREE.DoubleSide,
+        aoMap: ambientOcclusionMap,
+        aoMapIntensity: 5,
+        transparent: true,
+        opacity: 0.25
+      });
+
+      glassMaterial.map = baseColorTexture;
+      glassMaterial.bumpMap = bumpMapTexture;
+      glassMaterial.bumpScale = 10;
+      glassMaterial.roughnessMap = roughnessMapTexture;
+      glassMaterial.roughness = 2;
+      
+      glassMaterial.map.wrapS = glassMaterial.map.wrapT = THREE.RepeatWrapping;
+      glassMaterial.bumpMap.wrapS = glassMaterial.bumpMap.wrapT = THREE.RepeatWrapping;
+      glassMaterial.roughnessMap.wrapS = glassMaterial.roughnessMap.wrapT = THREE.RepeatWrapping;
+      glassMaterial.aoMap.wrapS = glassMaterial.aoMap.wrapT = THREE.RepeatWrapping;
+
+      glassMaterial.map.repeat.set(8, 8);
+      glassMaterial.bumpMap.repeat.set(3, 3);
+      glassMaterial.roughnessMap.repeat.set(2, 2);
+      glassMaterial.aoMap.repeat.set(5, 5);
+
+      var room1c_geometry = new THREE.PlaneGeometry(600, 1500);
+      var room1_ceiling = new THREE.Mesh(room1c_geometry, wheat);
+      room1_ceiling.position.z = 350;
+      scene.add(room1_ceiling);
+
+      var room1f_geometry = new THREE.PlaneGeometry(600, 900);
+      var room1_front = new THREE.Mesh(room1f_geometry, moccasin);
+      room1_front.rotation.x = Math.PI / 2;
+      room1_front.position.y = 300;
+      scene.add(room1_front);
+
+      var room1b_geometry = new THREE.PlaneGeometry(200, 600);
+      var room1_back = new THREE.Mesh(room1b_geometry, moccasin);
+      room1_back.rotation.x = Math.PI / 2;
+      room1_back.position.x = -30;
+      room1_back.position.y = -480;
+      room1_back.position.z = 200;
+      scene.add(room1_back);
+
+      var room1t_geometry = new THREE.PlaneGeometry(250, 600);
+      var room1_tilt = new THREE.Mesh(room1t_geometry, wheat);
+      room1_tilt.rotation.x = Math.PI / 2;
+      room1_tilt.rotation.y = - Math.PI / 4;
+      room1_tilt.position.set(-212, -400, 200);
+      scene.add(room1_tilt);
+      
+      var room1_right_geometry = new THREE.PlaneGeometry(1000, 1000);
+      var room1_right = new THREE.Mesh(room1_right_geometry, glassMaterial);
+      room1_right.rotation.y = Math.PI / 2;
+      room1_right.position.x = 300;
+      scene.add(room1_right);
+
+      var roomin_right_geometry = new THREE.PlaneGeometry(1000, 1000);
+      var roomin_right = new THREE.Mesh(roomin_right_geometry, white);
+      roomin_right.rotation.y = Math.PI / 2;
+      roomin_right.position.x = 301;
+      scene.add(roomin_right);
+
+      var room2s_geometry = new THREE.PlaneGeometry(400, 350);
+      var room2_split = new THREE.Mesh(room2s_geometry, moccasin);
+      room2_split.rotation.y =  - Math.PI / 2;
+      room2_split.position.set(-300, -230, 200);
+      scene.add(room2_split);
+
+      var room2c_geometry = new THREE.PlaneGeometry(670, 1500);
+      var room2_ceiling = new THREE.Mesh(room2c_geometry, dimgray);
+      room2_ceiling.position.x = -635;
+      room2_ceiling.position.z = 350;
+      scene.add(room2_ceiling);
+
+      var room2f_geometry = new THREE.PlaneGeometry(670, 900);
+      var room2_front = new THREE.Mesh(room2f_geometry, darkslategray);
+      room2_front.rotation.x = Math.PI / 2;
+      room2_front.position.x = -635;
+      room2_front.position.y = 300;
+      scene.add(room2_front);
+
+      var room2l_geometry = new THREE.PlaneGeometry(800, 800);
+      var room2_left = new THREE.Mesh(room2l_geometry, darkslategray);
+      room2_left.rotation.y =  - Math.PI / 2;
+      room2_left.position.set(-950, 0, 200);
+      scene.add(room2_left);
+
+      var room2b_geometry = new THREE.PlaneGeometry(1000, 900);
+      var room2_back = new THREE.Mesh(room2b_geometry, darkslategray);
+      room2_back.rotation.x = Math.PI / 2;
+      room2_back.position.x = -800;
+      room2_back.position.y = -400;
+      scene.add(room2_back);
+
+      // Load artworks
+      var texture1 = loader.load('Madame Ramón Subercaseaux.jpg', function (texture1) {
+        var material = new THREE.MeshBasicMaterial({map: texture1});
+        var planeGeometry = new THREE.PlaneGeometry(109.9, 165.1);
+        var plane = new THREE.Mesh(planeGeometry, material);
+        plane.rotation.x = Math.PI / 2;
+        plane.position.set(200,299,175);
+        scene.add(plane);
+      });
+
+      var texture2 = loader.load('lady playfair.jpg', function (texture2) {
+        var material = new THREE.MeshBasicMaterial({map: texture2});
+        var planeGeometry = new THREE.PlaneGeometry(98.4, 152.1);
+        var plane1 = new THREE.Mesh(planeGeometry, material);
+        plane1.rotation.x = Math.PI / 2;
+        plane1.position.set(50,299,175);
+        scene.add(plane1);
+      });
+
+      var texture3 = loader.load('mrs._adrian_iselin.jpg', function (texture3) {
+        var material = new THREE.MeshBasicMaterial({map: texture3});
+        var planeGeometry = new THREE.PlaneGeometry(93, 153.7);
+        var plane2 = new THREE.Mesh(planeGeometry, material);
+        plane2.rotation.x = Math.PI / 2;
+        plane2.position.set(-200,299,175);
+        scene.add(plane2);
+      });
+
+      var texture4 = loader.load('Edouard.jpeg', function (texture4) {
+        var material = new THREE.MeshBasicMaterial({map: texture4});
+        var planeGeometry = new THREE.PlaneGeometry(60, 96);
+        var plane3 = new THREE.Mesh(planeGeometry, material);
+        plane3.rotation.x = Math.PI / 2;
+        plane3.position.set(-75,299,175);
+        scene.add(plane3);
+      });
+
+      var texture5 = loader.load('Elsie Palmer.jpeg', function (texture5) {
+        var material = new THREE.MeshBasicMaterial({map: texture5});
+        var planeGeometry = new THREE.PlaneGeometry(114.6, 190.8);
+        var plane4 = new THREE.Mesh(planeGeometry, material);
+        plane4.rotation.x = Math.PI / 2;
+        plane4.position.set(-420,299,175);
+        scene.add(plane4);
+      });
+
+      var texture6 = loader.load('Helen Sears.jpg', function (texture6) {
+        var material = new THREE.MeshBasicMaterial({map: texture6});
+        var planeGeometry = new THREE.PlaneGeometry(91.4, 167.3);
+        var plane5 = new THREE.Mesh(planeGeometry, material);
+        plane5.rotation.x = Math.PI / 2;
+        plane5.position.set(-570,299,175);
+        scene.add(plane5);
+      });
+
+      var texture7 = loader.load('Mrs_Joshua_Montgomery_Sears_(Sarah_Choate_Sears).jpg', function (texture7) {
+        var material = new THREE.MeshBasicMaterial({map: texture7});
+        var planeGeometry = new THREE.PlaneGeometry(96.8, 147.6);
+        var plane6 = new THREE.Mesh(planeGeometry, material);
+        plane6.rotation.x = Math.PI / 2;
+        plane6.position.set(-710,299,175);
+        scene.add(plane6);
+      });
+
+      var texture8 = loader.load('Fiske Warren.jpg', function (texture8) {
+        var material = new THREE.MeshBasicMaterial({map: texture8});
+        var planeGeometry = new THREE.PlaneGeometry(102.6, 152.4);
+        var plane7 = new THREE.Mesh(planeGeometry, material);
+        plane7.rotation.x = Math.PI / 2;
+        plane7.position.set(-860,299,175);
+        scene.add(plane7);
+      });
+
+      var texture9 = loader.load('Mrs._Edward_Darley_Boit_.jpg', function (texture9) {
+        var material = new THREE.MeshBasicMaterial({map: texture9});
+        var planeGeometry = new THREE.PlaneGeometry(106.7, 153);
+        var plane8 = new THREE.Mesh(planeGeometry, material);
+        plane8.rotation.y = Math.PI / 2;
+        plane8.rotation.x = Math.PI / 2;
+        plane8.position.set(-949,70,175);
+        scene.add(plane8);
+      });
+
+      var texture10 = loader.load('Mrs_Robert_Harrison.jpeg', function (texture10) {
+        var material = new THREE.MeshBasicMaterial({map: texture10});
+        var planeGeometry = new THREE.PlaneGeometry(80.3, 157.8);
+        var plane10 = new THREE.Mesh(planeGeometry, material);
+        plane10.rotation.y = Math.PI / 2;
+        plane10.rotation.x = Math.PI / 2;
+        plane10.position.set(-949,-170,175);
+        scene.add(plane10);
+      });
+
+      var texture11 = loader.load('Mrs. Hugh Hammersley.png', function (texture11) {
+        var material = new THREE.MeshBasicMaterial({map: texture11});
+        var planeGeometry = new THREE.PlaneGeometry(115.6, 205.7);
+        var plane11 = new THREE.Mesh(planeGeometry, material);
+        plane11.rotation.x = - Math.PI / 2;
+        plane11.rotation.z = -  Math.PI;
+        plane11.position.set(-725,-385,175);
+        scene.add(plane11);
+      });
+
+      var texture12 = loader.load('Ena_and_Betty_Daughters_of_Wertheimer.jpg', function (texture12) {
+        var material = new THREE.MeshBasicMaterial({map: texture12});
+        var planeGeometry = new THREE.PlaneGeometry(130.8, 185.4);
+        var plane12 = new THREE.Mesh(planeGeometry, material);
+        plane12.rotation.y = Math.PI / 2;
+        plane12.rotation.x = Math.PI / 2;
+        plane12.position.set(-299,-200,175);
+        scene.add(plane12);
+      });
+
+      var texture13 = loader.load('MFA.png', function (texture13) {
+        var material = new THREE.MeshBasicMaterial({map: texture13});
+        var planeGeometry = new THREE.PlaneGeometry(150, 200);
+        var plane13 = new THREE.Mesh(planeGeometry, material);
+        plane13.rotation.x = - Math.PI / 2;
+        plane13.rotation.z = -  Math.PI;
+        plane13.position.set(-27,-475,175);
+        scene.add(plane13);
+      });
+
+      var texture14 = loader.load('Mrs. Edward L. Davis.jpeg', function (texture14) {
+        var material = new THREE.MeshBasicMaterial({map: texture14});
+        var planeGeometry = new THREE.PlaneGeometry(122.56, 218.76);
+        var plane14 = new THREE.Mesh(planeGeometry, material);
+        plane14.rotation.y = Math.PI / 1.4;
+        plane14.rotation.x = Math.PI / 2;
+        plane14.position.set(-200, -400,175);
+        scene.add(plane14);
+      });
+
+      // add fig
+      moving = new THREE.Object3D();
+      fig = new THREE.Object3D();
+      var head = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 10), new THREE.MeshPhongMaterial({color: 0x1c1c1c}));
+      head.position.z = 53;
+      fig.add(head);
+      var neck = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 4), new THREE.MeshPhongMaterial({color: 0xffdeb0}));
+      neck.position.z = 48;
+      fig.add(neck);
+      const points = [];
+      for ( let i = 0; i < 16; i ++ ) {
+        points.push( new THREE.Vector2( Math.sin( i * 0.2 ) * 15 + 5, ( i - 2 ) * 1 ) );
+      }
+      const geometry = new THREE.LatheGeometry( points );
+      const material = new THREE.MeshBasicMaterial( { color: 0x333366 } );
+      const lathe = new THREE.Mesh( geometry, material );
+      lathe.rotation.x = - Math.PI/2;
+      lathe.position.z = 30;
+      fig.add( lathe );
+      body = new THREE.Mesh(new THREE.BoxGeometry(15, 11, 15), new THREE.MeshPhongMaterial({color: 0xa8cfff}));
+      body.position.z = 39;
+      fig.add(body);
+      lhip = new THREE.Object3D();
+      rhip = new THREE.Object3D();
+      body.add(lhip);
+      body.add(rhip);
+      lleg = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4, 20), new THREE.MeshPhongMaterial({color: 0xffdeb0}));
+      lleg.position.x = -4;
+      lleg.position.z = -30;
+      lhip.add(lleg);
+      rleg = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4, 20), new THREE.MeshPhongMaterial({color: 0xffdeb0}));
+      rleg.position.x = 4;
+      rleg.position.z = -30;
+      rhip.add(rleg);
+      
+      ls = new THREE.Object3D();
+      rs = new THREE.Object3D();
+      body.add(ls);
+      body.add(rs);
+      larm = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 14), new THREE.MeshPhongMaterial({color: 0xffdeb0}));
+      larm.rotation.y = Math.PI/4;
+      larm.position.x = -10;
+      ls.add(larm);
+      rarm = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 14), new THREE.MeshPhongMaterial({color: 0xffdeb0}));
+      rarm.rotation.y = - Math.PI/4;
+      rarm.position.x = 10;
+      rs.add(rarm);
+      
+      moving.position.set(150, -300, 0);
+      moving.add(fig);
+      scene.add(moving);
+      figHeading = new THREE.Object3D();
+      figHeading.position.set(0, 25, 0);
+      moving.add(figHeading);
+      camPosition = new THREE.Object3D(); 
+      camPosition.position.set(0, -175, 100);
+      moving.add(camPosition);
+      // camTarget = new THREE.Mesh(new THREE.CubeGeometry(0.5,0.5,0.5),new THREE.MeshPhongMaterial( { color: 'red' } ));
+      camTarget = new THREE.Object3D();  
+      camTarget.position.set(0, 0, 100);
+      moving.add(camTarget);
+    }
+
+    var angle = 0;
+    var llegRotationSpeed = 0.2; 
+
+    function updateAnimation() {
+      camPosition.getWorldPosition(camera.position);
+      camera.lookAt(camTarget.getWorldPosition(gaze));
+
+      // scan keyboard
+      keyboard.update();
+      
+      figPos = fig.getWorldPosition(figPos);
+      thrust = figHeading.getWorldPosition(thrust);
+      thrust.sub(figPos);
+      thrust.multiplyScalar(0.2);  
+      
+      if ((keyboard.pressed("space") || keyboard.pressed("up")) && figPos.x < 280 && figPos.x > -945 && figPos.y < 290) {
+        angle += llegRotationSpeed;
+        const rotationAmount = Math.sin(angle) * (Math.PI / 6); 
+        if (lhip) {
+          lhip.rotation.x = rotationAmount;
+        }
+        const rotationAmounta = -Math.sin(angle) * (Math.PI / 6); 
+        if (rhip) {
+          rhip.rotation.x = rotationAmounta;
+        }
+        if (rs) {
+          rs.rotation.x = rotationAmount;
+        }
+        if (ls) {
+          ls.rotation.x = rotationAmounta;
+        }
+        moving.position.add(thrust);
+        console.log(figPos);
+      } else if (keyboard.pressed("backspace") || keyboard.pressed("down")) {
+        angle += llegRotationSpeed;
+        const rotationAmount = Math.sin(angle) * (Math.PI / 6); 
+        if (rhip) {
+          rhip.rotation.x = rotationAmount;
+        }
+        const rotationAmounta = -Math.sin(angle) * (Math.PI / 6); 
+        if (lhip) {
+          lhip.rotation.x = rotationAmounta;
+        }
+        if (ls) {
+          rs.rotation.x = rotationAmount;
+        }
+        if (rs) {
+          ls.rotation.x = rotationAmounta;
+        }
+        moving.position.sub(thrust);
+      } else {
+        fig.rotation.x = 0;
+      }
+
+      if (keyboard.pressed("left")) {
+        angle += llegRotationSpeed;
+        const rotationAmount = Math.sin(angle) * (Math.PI / 6); 
+        if (lhip) {
+          lhip.rotation.x = rotationAmount;
+        }
+        const rotationAmounta = -Math.sin(angle) * (Math.PI / 6); 
+        if (rhip) {
+          rhip.rotation.x = rotationAmounta;
+        }
+        if (rs) {
+          rs.rotation.x = rotationAmount;
+        }
+        if (ls) {
+          ls.rotation.x = rotationAmounta;
+        }
+        
+        moving.rotation.z += 0.02;
+      } else if (keyboard.pressed("right")) {
+        angle += llegRotationSpeed;
+        const rotationAmount = Math.sin(angle) * (Math.PI / 6); 
+        if (rhip) {
+          rhip.rotation.x = rotationAmount;
+        }
+        const rotationAmounta = -Math.sin(angle) * (Math.PI / 6); 
+        if (lhip) {
+          lhip.rotation.x = rotationAmounta;
+        }
+        if (ls) {
+          rs.rotation.x = rotationAmount;
+        }
+        if (rs) {
+          ls.rotation.x = rotationAmounta;
+        }
+
+        moving.rotation.z -= 0.02;
+      } else {
+        fig.rotation.y = 0;  
+      }
+    }
+
+    // Render the scene. This is called for each frame of the animation.
+    function render() {
+      updateAnimation();
+      renderer.render(scene, camera);
+      requestAnimationFrame(render);
+    }
+
+    //----------------------------------------------------------------------------------
+
+    // The init() function is called by the onload event when the document has loaded.
+    function init() {
+      try {
+        renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        canvas = renderer.domElement;
+        document.getElementById("canvas-holder").appendChild(canvas);
+      }
+      catch (e) {
+        document.getElementById("canvas-holder").innerHTML = "<h3><b>WebGL is not available.</b><h3>";
+        return;
+      }
+
+      // create and render scene
+      createScene();
+      render();
+    }
+
+  </script>
+
+</head>
+
+<body onload="init()">
+  <div id="canvas-holder">
+    <!-- Canvas element will be created here, sized to fit the window space -->
+    <p style="position: absolute; z-index: 1; color: white; padding-left: 2em;">Click in window; arrows to move</p>
+  </div>
+</body>
+
+</html>
