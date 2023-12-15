@@ -6,6 +6,7 @@
   <script src="KeyboardState.js"></script>
 
   <script>
+    // Define global variables
     var scene, camera, renderer;  
 
     var canvas; 
@@ -39,12 +40,6 @@
       return sphere;
     }
 
-    function checkCollision(object1, object2) {
-    const box1 = new THREE.Box3().setFromObject(object1);
-    const box2 = new THREE.Box3().setFromObject(object2);
-    return box1.intersectsBox(box2);
-    }
-
     function createScene() {
       renderer.setClearColor(0); 
       scene = new THREE.Scene(); 
@@ -68,7 +63,7 @@
       // dirLight.position.set(0, 80, 80);
       // scene.add(dirLight);
 
-      // add the ground
+      // add the floor
       var loader = new THREE.TextureLoader();
       var groundMap = loader.load("Wood_Tiles_003_basecolor.jpg");
       var groundBump = loader.load("Wood_Tiles_003_height.png");
@@ -92,6 +87,7 @@
       var white = new THREE.MeshPhongMaterial({color: "white", specular: "white", shininess: 1, side: THREE.DoubleSide});
       var wheat = new THREE.MeshPhongMaterial({color: "wheat", specular: "white", shininess: 1, side: THREE.DoubleSide});
 
+      // add walls
       var baseColorTexture = loader.load("Glass_Blocks_001_basecolor.jpg");
       var bumpMapTexture = loader.load("Glass_Blocks_001_height.png");
       var roughnessMapTexture = loader.load("Glass_Blocks_001_roughness.jpg");
@@ -125,7 +121,7 @@
       glassMaterial.roughnessMap.repeat.set(2, 2);
       glassMaterial.aoMap.repeat.set(5, 5);
 
-      var room1c_geometry = new THREE.PlaneGeometry(600, 1500);
+      var room1c_geometry = new THREE.PlaneGeometry(600, 960);
       var room1_ceiling = new THREE.Mesh(room1c_geometry, wheat);
       room1_ceiling.position.z = 350;
       scene.add(room1_ceiling);
@@ -136,7 +132,7 @@
       room1_front.position.y = 300;
       scene.add(room1_front);
 
-      var room1b_geometry = new THREE.PlaneGeometry(200, 600);
+      var room1b_geometry = new THREE.PlaneGeometry(200, 400);
       var room1_back = new THREE.Mesh(room1b_geometry, moccasin);
       room1_back.rotation.x = Math.PI / 2;
       room1_back.position.x = -30;
@@ -144,7 +140,7 @@
       room1_back.position.z = 200;
       scene.add(room1_back);
 
-      var room1t_geometry = new THREE.PlaneGeometry(250, 600);
+      var room1t_geometry = new THREE.PlaneGeometry(250, 400);
       var room1_tilt = new THREE.Mesh(room1t_geometry, wheat);
       room1_tilt.rotation.x = Math.PI / 2;
       room1_tilt.rotation.y = - Math.PI / 4;
@@ -157,7 +153,7 @@
       room1_right.position.x = 300;
       scene.add(room1_right);
 
-      var roomin_right_geometry = new THREE.PlaneGeometry(1000, 1000);
+      var roomin_right_geometry = new THREE.PlaneGeometry(1000, 900);
       var roomin_right = new THREE.Mesh(roomin_right_geometry, white);
       roomin_right.rotation.y = Math.PI / 2;
       roomin_right.position.x = 301;
@@ -166,10 +162,10 @@
       var room2s_geometry = new THREE.PlaneGeometry(400, 350);
       var room2_split = new THREE.Mesh(room2s_geometry, moccasin);
       room2_split.rotation.y =  - Math.PI / 2;
-      room2_split.position.set(-300, -230, 200);
+      room2_split.position.set(-300, -200, 200);
       scene.add(room2_split);
 
-      var room2c_geometry = new THREE.PlaneGeometry(670, 1500);
+      var room2c_geometry = new THREE.PlaneGeometry(670, 960);
       var room2_ceiling = new THREE.Mesh(room2c_geometry, dimgray);
       room2_ceiling.position.x = -635;
       room2_ceiling.position.z = 350;
@@ -182,13 +178,13 @@
       room2_front.position.y = 300;
       scene.add(room2_front);
 
-      var room2l_geometry = new THREE.PlaneGeometry(800, 800);
+      var room2l_geometry = new THREE.PlaneGeometry(400, 800);
       var room2_left = new THREE.Mesh(room2l_geometry, darkslategray);
       room2_left.rotation.y =  - Math.PI / 2;
       room2_left.position.set(-950, 0, 200);
       scene.add(room2_left);
 
-      var room2b_geometry = new THREE.PlaneGeometry(1000, 900);
+      var room2b_geometry = new THREE.PlaneGeometry(600, 800);
       var room2_back = new THREE.Mesh(room2b_geometry, darkslategray);
       room2_back.rotation.x = Math.PI / 2;
       room2_back.position.x = -800;
@@ -328,7 +324,7 @@
         scene.add(plane14);
       });
 
-      // add fig
+      // add fig (Hierarchical Modeling)
       moving = new THREE.Object3D();
       fig = new THREE.Object3D();
       var head = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 10), new THREE.MeshPhongMaterial({color: 0x1c1c1c}));
