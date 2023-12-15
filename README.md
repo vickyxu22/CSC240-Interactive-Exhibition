@@ -2,7 +2,7 @@
 
 ## Overview:
 
-The game replicates two showrooms from the ["Fashioned by Sargent"](https://www.mfa.org/exhibition/fashioned-by-sargent) exhibition at the [Museum of Fine Arts, Boston](https://www.mfa.org/). 
+The project replicates two showrooms from the ["Fashioned by Sargent"](https://www.mfa.org/exhibition/fashioned-by-sargent) exhibition at the [Museum of Fine Arts, Boston](https://www.mfa.org/). 
 The setting and layout precisely mirror those of the original exhibition, and the size of the paintings matches their actual, unframed dimensions.
 The goal is to provide users with an immersive online experience of this remarkable exhibition. 
 By encountering Sargent's portraits, the exhibition prompts us to rethink the art of image-making and whether a portrayal is truthful, aspirational, or purely imaginative.
