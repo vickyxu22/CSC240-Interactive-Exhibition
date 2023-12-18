@@ -1,4 +1,4 @@
-# Fashioned by Sargent -- A Interactive Exhibition
+# Fashioned by Sargent -- An Interactive Exhibition
 
 ## Overview:
 
